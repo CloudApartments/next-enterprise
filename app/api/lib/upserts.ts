@@ -7,7 +7,7 @@ export async function upsertParcels(doc: any) {
     const client = await clientPromise
     const db = client.db("Cloud_Pipeline")
     const collection = db.collection("feasibility")
-    const filter = { CloudId: doc.CloudId }
+    const filter = { id: doc.id }
     const update = { $set: doc }
     const options = { upsert: true }
 
