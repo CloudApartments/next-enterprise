@@ -6,7 +6,7 @@ export async function initDb() {
     const db = client.db("Cloud_Pipeline")
 
     const collection = db.collection("feasibility")
-    const data = await collection.find({}).toArray()
+    await collection.find({}).toArray()
   } catch (e) {
     console.error(e)
   }

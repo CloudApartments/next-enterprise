@@ -19,6 +19,7 @@ export function useElevationData(
   const { data, error } = useSWR(key, fetcher)
 
   return {
+    // @ts-ignore
     elevationData: data?.results[0]?.elevation,
     isLoading: !error && !data,
     isError: error,

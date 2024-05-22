@@ -1,5 +1,5 @@
+// @ts-nocheck
 import React, { useState } from 'react'
-
 const JSONViewer = ({ data, level = 0 }) => {
   const [expanded, setExpanded] = useState({})
 

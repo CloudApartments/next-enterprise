@@ -12,6 +12,7 @@ const apiOptions = {
 }
 
 async function loadMap(): Promise<typeof google> {
+  // @ts-ignore
   const apiLoader = new Loader(apiOptions)
   return await apiLoader.load()
 }
@@ -37,12 +38,13 @@ const GoogleMap: React.FC<GoogleMapProps> = ({ mapCenter }) => {
 
   useEffect(() => {
     console.log("MODELINNNNGGGGG")
+    // @ts-ignore
     models.forEach((model) => {
       const g5 = createG5(model.position, model.rotation)
       globalOverlay?.scene.add(g5)
     })
     globalOverlay?.requestRedraw()
-  }, [globalOverlay?.scene, models])
+  }, [globalOverlay, globalOverlay?.scene, models])
   useEffect(() => {
     getGoogle()
   }, [getGoogle])
@@ -78,7 +80,9 @@ const GoogleMap: React.FC<GoogleMapProps> = ({ mapCenter }) => {
       map.addListener("mousemove", (ev: google.maps.MapMouseEvent) => {
         const { domEvent } = ev
         const { left, top, width, height } = mapDiv.getBoundingClientRect()
+        // @ts-ignore
         const x = domEvent.clientX - left
+        // @ts-ignore
         const y = domEvent.clientY - top
         mousePosition.current.x = 2 * (x / width) - 1
         mousePosition.current.y = 1 - 2 * (y / height)

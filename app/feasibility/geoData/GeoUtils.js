@@ -1,4 +1,3 @@
-import * as turf from "@turf/turf"
 import proj4 from "proj4"
 import wellknown from "wellknown"
 

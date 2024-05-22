@@ -11,7 +11,7 @@ export async function upsertParcels(doc: any) {
     const update = { $set: doc }
     const options = { upsert: true }
 
-    const result = await collection.updateOne(filter, update, options)
+    await collection.updateOne(filter, update, options)
   } catch (e) {
     console.error(e)
   }
@@ -26,7 +26,7 @@ export async function upsertZoning(doc: any) {
     const update = { $set: doc }
     const options = { upsert: true }
 
-    const result = await collection.updateOne(filter, update, options)
+    await collection.updateOne(filter, update, options)
   } catch (e) {
     console.error(e)
   }

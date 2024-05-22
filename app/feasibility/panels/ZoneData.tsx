@@ -18,7 +18,7 @@ export default function ZoneData(props: any) {
       cleanedData.CloudId = CloudId
       upsertZoning(cleanedData)
     }
-  }, [data, error, isLoading])
+  }, [CloudId, data, error, isLoading])
 
 
 
