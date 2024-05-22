@@ -8,10 +8,10 @@ export default function UnityCloud() {
     sendMessage("DnDMessenger", "DrawMainParcel", JSON.stringify(mainParcel))
   }
   const { unityProvider, sendMessage, addEventListener, removeEventListener } = useUnityContext({
-    loaderUrl: "/Build/unity.loader.js",
-    dataUrl: "/Build/unity.data",
-    frameworkUrl: "/Build/unity.framework.js",
-    codeUrl: "/Build/unity.wasm",
+    loaderUrl: "/unity.loader.js",
+    dataUrl: "/unity.data",
+    frameworkUrl: "/unity.framework.js",
+    codeUrl: "/unity.wasm",
   })
 
   useEffect(() => {
