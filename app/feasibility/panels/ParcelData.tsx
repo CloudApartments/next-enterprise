@@ -1,25 +1,36 @@
 import { useEffect, useState } from 'react'
 import './parcelStyles.css'
+import { Vector3 } from 'three'
 import { upsertParcels } from 'app/api/lib/upserts'
 import { useZustand } from 'app/api/zustand'
 import useParcelAPI from "../api/lightboxParcel"
 import useParcelAdjacentAPI from '../api/lightboxParcelAdjacent'
-import { convertGeoJsonToRelative, convertToXYZ, cleanJSON, wgs84, metricProj } from '../geoData/GeoUtils'
+import { cleanJSON, convertToXYZ } from '../geoData/GeoUtils'
 import JSONViewer from '../JSONViewer'
-import { Vector3 } from 'three'
+import { useElevationData } from '../api/useElevationData'
 
-function ParcelData(props) {
-  const { overlay, SET_MAIN_PARCEL } = useZustand()
+function ParcelData(props: { address: any; setMapCenter: any; CloudId: any }) {
+  const { overlay, SET_MAIN_PARCEL, ADD_ADJACENT_PARCEL } = useZustand()
   const { address, setMapCenter, CloudId } = props
+  const [tmpCenter, setTmpCenter] = useState<{ lat: number, lng: number }>()
   const [cleanData, setCleanData] = useState({ budgie: "sma,e" })
-  const [parcelId, setParcelId] = useState(null)
+  const [parcelId, setParcelId] = useState('')
+
   const { data, error, isLoading } = useParcelAPI(address)
+
+
   const { data: adjacentData, error: adjacentError, isLoading: adjacentIsLoading } = useParcelAdjacentAPI(parcelId)
+  const { elevationData, isLoading: isElevationLoading, isError: isElevationError } = useElevationData(
+    tmpCenter?.lat,
+    tmpCenter?.lng,
+    'AIzaSyAExrPP2-yrt9vlXl52igXqdbAs_f3PID8'
+  )
 
   useEffect(() => {
     if (data && !error && !isLoading) {
       const cleanedData = cleanJSON(data.parcels[0])
       setCleanData(cleanedData)
+      console.log("elevationData", elevationData)
 
       // Convert WKT to GeoJSON
       const geojson = convertToXYZ(cleanedData.location.geometry.wkt)
@@ -27,16 +38,16 @@ function ParcelData(props) {
       // Get the representative point or calculate the centroid
       const lat = cleanedData.location.representativePoint.latitude
       const lng = cleanedData.location.representativePoint.longitude
-      const referencePoint = [lng, lat]
-
+      setTmpCenter({ lat, lng })
+      setMapCenter({ lat, lng })
       // Convert GeoJSON boundary to relative projected coordinates
-      if (overlay) {
-
+      if (overlay && elevationData) {
+        overlay.getMap().setCenter({ lat, lng, elevationData })
         const relativeBoundary = geojson?.coordinates[0].map(coord => {
           const yup = new Vector3()
-          overlay.latLngAltitudeToVector3({ lng: coord[0], lat: coord[1] }, yup)
+          overlay.latLngAltitudeToVector3({ lng: coord[0], lat: coord[1], altitude: elevationData }, yup)
           console.log(yup)
-          yup.y = 0
+          // yup.y = 0
           return yup
         })
         // const relativeBoundary = convertGeoJsonToRelative(geojson, wgs84, metricProj, referencePoint)
@@ -45,11 +56,10 @@ function ParcelData(props) {
       // Update data and map center
       cleanedData.CloudId = CloudId
       upsertParcels(cleanedData)
-      setMapCenter({ lat, lng })
       setParcelId(cleanedData.id)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, error, isLoading, overlay])
+  }, [data, error, isLoading, overlay, elevationData])
 
   useEffect(() => {
     if (adjacentData && !adjacentError && !adjacentIsLoading) {
@@ -63,8 +73,17 @@ function ParcelData(props) {
         const referencePoint = [lng, lat]
 
         // Convert GeoJSON boundary to relative projected coordinates
-        const relativeBoundary = convertGeoJsonToRelative(geojson, wgs84, metricProj, referencePoint)
-        console.log(relativeBoundary)
+        if (overlay) {
+          const relativeBoundary = geojson?.coordinates[0].map(coord => {
+            const yup = new Vector3()
+            overlay.latLngAltitudeToVector3({ lng: coord[0], lat: coord[1] }, yup)
+            console.log(yup)
+            yup.y = 0
+            return yup
+          })
+          // const relativeBoundary = convertGeoJsonToRelative(geojson, wgs84, metricProj, referencePoint)
+          ADD_ADJACENT_PARCEL(relativeBoundary)
+        }
 
 
         cleanedData.CloudId = CloudId

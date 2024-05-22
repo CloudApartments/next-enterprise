@@ -34,7 +34,7 @@ const ThreeMap = (props: any) => {
         // @ts-ignore
         center={{ lat, lng, height: 0 }}
         defaultZoom={18}
-        defaultTilt={55}
+        defaultTilt={90}
       // clickableIcons={false}
 
       />

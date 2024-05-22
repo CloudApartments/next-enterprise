@@ -1,30 +1,33 @@
-import { Shape, ShapeGeometry, Mesh, MeshBasicMaterial, DoubleSide, Vector3, Euler } from 'three'
 import { Loader } from "@googlemaps/js-api-loader"
 import { ThreeJSOverlayView } from "@googlemaps/three"
-import React, { ReactElement, useCallback, useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import * as THREE from 'three'
 import { useZustand } from 'app/api/zustand'
+import { createG5 } from "../3d/G5"
+import { drawShapes } from '../3d/threeUtils'
 
 const apiOptions = {
   apiKey: "AIzaSyAidlspu6dFlmcHyOP9vHAUbtGF9WqA7i0",
   libraries: ["places", "geometry"],
-  callback: () => {
-    alert("buffalo")
-  },
 }
 
-async function loadMap() {
+async function loadMap(): Promise<typeof google> {
   const apiLoader = new Loader(apiOptions)
   return await apiLoader.load()
 }
 
-const GoogleMap: React.FC<{ mapCenter: google.maps.LatLngLiteral }> = ({ mapCenter }): ReactElement => {
-  const { SET_OVERLAY, overlay: globalOverlay, mainParcel } = useZustand()
+interface GoogleMapProps {
+  mapCenter: google.maps.LatLngLiteral
+}
+
+const GoogleMap: React.FC<GoogleMapProps> = ({ mapCenter }) => {
+  const { SET_OVERLAY, overlay: globalOverlay, mainParcel, adjacentParcels, models } = useZustand()
   const [google, setGoogle] = useState<any>(null)
-  const [map, setMap] = useState<any>(null)
-  const [vertices, setVertices] = useState<Vector3[]>(mainParcel)
-  const overlay = useRef<any>(null)
-  const mapRef = useRef<HTMLDivElement>(null)
+  const [map, setMap] = useState<google.maps.Map | null>(null)
+  const [vertices, setVertices] = useState<THREE.Vector3[]>(mainParcel)
+  const [adJacentVertices, setAdjacentVertices] = useState<THREE.Vector3[][]>([])
+  const overlay = useRef<ThreeJSOverlayView | null>(null)
+  const mapRef = useRef<HTMLDivElement | null>(null)
   const mousePosition = useRef(new THREE.Vector2())
 
   const getGoogle = useCallback(async () => {
@@ -33,24 +36,29 @@ const GoogleMap: React.FC<{ mapCenter: google.maps.LatLngLiteral }> = ({ mapCent
   }, [])
 
   useEffect(() => {
+    console.log("MODELINNNNGGGGG")
+    models.forEach((model) => {
+      const g5 = createG5(model.position, model.rotation)
+      globalOverlay?.scene.add(g5)
+    })
+    globalOverlay?.requestRedraw()
+  }, [globalOverlay?.scene, models])
+  useEffect(() => {
     getGoogle()
   }, [getGoogle])
 
   useEffect(() => {
     if (google && !map) {
-      const mapOptions = {
+      const mapOptions: google.maps.MapOptions = {
         mapId: "5c3ca4ce7762c0dc",
         disableDoubleClickZoom: true,
         gestureHandling: "cooperative",
         center: mapCenter,
-        zoom: 18,
-        tilt: 55,
+        zoom: 19.5,
+        tilt: 90,
         clickableIcons: false,
-        pixelRatio: 1,
-        scrollWheel: false,
-        dragging: false,
       }
-      const mapInstance = new google.maps.Map(mapRef.current, mapOptions)
+      const mapInstance = new google.maps.Map(mapRef.current!, mapOptions)
       setMap(mapInstance)
     }
   }, [google, map, mapCenter])
@@ -67,30 +75,18 @@ const GoogleMap: React.FC<{ mapCenter: google.maps.LatLngLiteral }> = ({ mapCent
 
       const mapDiv = map.getDiv()
 
-      map.addListener("mousemove", (ev) => {
+      map.addListener("mousemove", (ev: google.maps.MapMouseEvent) => {
         const { domEvent } = ev
         const { left, top, width, height } = mapDiv.getBoundingClientRect()
         const x = domEvent.clientX - left
         const y = domEvent.clientY - top
         mousePosition.current.x = 2 * (x / width) - 1
         mousePosition.current.y = 1 - 2 * (y / height)
-        overlay.current.requestRedraw()
+        overlay.current!.requestRedraw()
       })
 
-      let highlightedObject: THREE.Mesh | null = null
-      const DEFAULT_COLOR = 0x00ff00
-      const HIGHLIGHT_COLOR = 0xff0000
-
       const onClick = () => {
-        const intersections = overlay.current.raycast(mousePosition.current)
-        if (highlightedObject) {
-          highlightedObject.material.color.setHex(DEFAULT_COLOR)
-        }
-        if (intersections.length > 0) {
-          highlightedObject = intersections[0].object
-          highlightedObject.material.color.setHex(HIGHLIGHT_COLOR)
-        }
-        overlay.current.requestRedraw()
+        overlay.current!.requestRedraw()
       }
 
       map.addListener('mousedown', onClick)
@@ -100,72 +96,39 @@ const GoogleMap: React.FC<{ mapCenter: google.maps.LatLngLiteral }> = ({ mapCent
         google.maps.event.clearListeners(map, 'mousemove')
       }
     }
-  }, [map, mapCenter, google])
+  }, [map, mapCenter, google, SET_OVERLAY])
 
   useEffect(() => {
     if (globalOverlay && vertices.length > 0) {
       const scene = globalOverlay.scene
-
-      // Remove previous shape
-      while (scene.children.length > 0) {
-        scene.remove(scene.children[0])
-      }
-
-      // Prepare points from vertices
-      const points = vertices.map(vertex => new THREE.Vector3(vertex.x, vertex.y, vertex.z))
-
-      // Create clickable shape
-      const shape = makeClickableShape({
-        id: 'shapeId',  // Replace with appropriate ID
-        points: points,
-        parcelId: 'parcelId'  // Replace with appropriate parcel ID
-      })
-
-      // Add shape to the scene
-      scene.add(shape)
+      drawShapes(scene, [vertices], 'mainShapeId', 'mainParcelId')
       globalOverlay.requestRedraw()
     }
   }, [vertices, globalOverlay, mainParcel])
 
+  useEffect(() => {
+    if (globalOverlay && adJacentVertices && adJacentVertices.length > 0) {
+      const scene = globalOverlay.scene
+      drawShapes(scene, adJacentVertices, 'adjacentShapeId', 'adjacentParcelId', "rgba(99,101,116,.1)")
+      globalOverlay.requestRedraw()
+    }
+  }, [adJacentVertices, globalOverlay])
+
   return (
     <div>
+      <button onClick={() => {
+        setVertices(mainParcel)
+        setAdjacentVertices(adjacentParcels)
+        globalOverlay!.scene.add(createG5())
+        globalOverlay!.requestRedraw()
+      }}>DRAW</button>
       <div
         id="map"
         ref={mapRef}
         style={{ height: "99vh", width: "100%", marginBottom: "28px" }}
       />
-      <button onClick={() => setVertices(mainParcel)}>DRAW</button>
     </div>
   )
 }
 
 export default GoogleMap
-const makeClickableShape = (props: {
-  id: any,
-  points: Vector3[],
-  parcelId: string
-}) => {
-  const { parcelId, points } = props
-  let customShape = new Shape()
-  points.forEach((point: Vector3, index: number) => {
-    if (index === 0) {
-      customShape.moveTo(point.x, point.z)
-    } else {
-      customShape.lineTo(point.x, point.z)
-    }
-  })
-  customShape.lineTo(points[0].x, points[0].z) // Close the shape
-
-  let geometry = new ShapeGeometry(customShape)
-  let material = new MeshBasicMaterial({
-    color: "rgb(69,71,86)",
-    side: DoubleSide,
-    transparent: true,
-    opacity: 1,
-  })
-  const shape: Mesh = new Mesh(geometry, material)
-  shape.userData = { id: parcelId, type: "parcel" }
-  // Remove the rotation adjustment
-  // shape.rotation.setFromVector3(new Vector3(Math.PI / 2, 0, 0))
-  return shape
-}
