@@ -21,7 +21,7 @@ export default function FeasibilityRenderer() {
       <header>Parcel Data</header>
       <ParcelData address={address} setMapCenter={setMapCenter} CloudId={id} />
       <header>Zoning Data</header>
-      <ZoneData address={address} CloudId={id} />
+      {/* <ZoneData address={address} CloudId={id} /> */}
       {mapCenter && <GoogleMap mapCenter={mapCenter} />}
       <div style={{ width: '100vw', height: '100vh' }}>
         <UnityCloud /></div>

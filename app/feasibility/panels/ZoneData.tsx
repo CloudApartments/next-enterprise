@@ -10,15 +10,15 @@ import JSONViewer from '../JSONViewer'
 export default function ZoneData(props: any) {
   const { address, CloudId } = props
   const [cleanData, setCleanData] = useState({ budgie: "snake" })
-  const { data, error, isLoading } = useZoneomicsAPI(address)
-  useEffect(() => {
-    if (data && !error && !isLoading) {
-      const cleanedData = cleanJSON(data).data
-      setCleanData(cleanedData)
-      cleanedData.CloudId = CloudId
-      upsertZoning(cleanedData)
-    }
-  }, [CloudId, data, error, isLoading])
+  // const { data, error, isLoading } = useZoneomicsAPI(address)
+  // useEffect(() => {
+  //   if (data && !error && !isLoading) {
+  //     const cleanedData = cleanJSON(data).data
+  //     setCleanData(cleanedData)
+  //     cleanedData.CloudId = CloudId
+  //     upsertZoning(cleanedData)
+  //   }
+  // }, [CloudId, data, error, isLoading])
 
 
 
